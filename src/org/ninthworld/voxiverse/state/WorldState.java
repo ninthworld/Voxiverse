@@ -24,6 +24,7 @@ public class WorldState implements State {
 	@Override
 	public void input(Game game, int delta) {
 		//world.camera.acceptInput(delta);
+		world.input(game);
 		world.newCamera.acceptInput(delta);
 	}
 
@@ -37,6 +38,9 @@ public class WorldState implements State {
 		//world.camera.apply();
 		world.newCamera.apply();
 		world.render();
+		world.newCamera.renderCamera();
+		
+		world.cursorRaytracer.raytrace(world.newCamera, world);
 	}
 
 	@Override

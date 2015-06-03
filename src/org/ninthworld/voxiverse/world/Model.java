@@ -318,7 +318,7 @@ public class Model {
 		if(inBounds(voxelPos)){
 			return data[voxelPos.x][voxelPos.y][voxelPos.z];
 		}else{
-			return Material.NULL;
+			return Material.AIR;
 		}
 	}
 	
@@ -330,33 +330,31 @@ public class Model {
 		Model model = null;
 		InputStream in = null;
 		try {
-			try {
-				in = new BufferedInputStream(new FileInputStream(new File(path)));
-				int x_size, y_size, z_size;
-				
-				x_size = in.read();
-				y_size = in.read();
-				z_size = in.read();
-				
-				int[] working = new int[x_size*y_size*z_size];
-				int read = 0;
-				while(read < working.length){
-					working[read] = in.read();
-					read++;
-				}
-				
-				int[][][] voxels = new int[x_size][y_size][z_size];
-				for(int x=0; x<x_size; x++){
-					for(int y=0; y<y_size; y++){
-						for(int z=0; z<z_size; z++){
-							voxels[x][y][z] = working[z + (y*z_size) + (x*z_size*y_size)];
-						}
+			in = new BufferedInputStream(new FileInputStream(new File(path)));
+			int x_size, y_size, z_size;
+			
+			x_size = in.read();
+			y_size = in.read();
+			z_size = in.read();
+			
+			int[] working = new int[x_size*y_size*z_size];
+			int read = 0;
+			while(read < working.length){
+				working[read] = in.read();
+				read++;
+			}
+			
+			int[][][] voxels = new int[x_size][y_size][z_size];
+			for(int x=0; x<x_size; x++){
+				for(int y=0; y<y_size; y++){
+					for(int z=0; z<z_size; z++){
+						voxels[x][y][z] = working[z + (y*z_size) + (x*z_size*y_size)];
 					}
 				}
-				model = new Model(voxels);
-			} finally {
-				in.close();
 			}
+			model = new Model(voxels);
+		
+			in.close();
 		} catch(FileNotFoundException e) {			
 		} catch(IOException e) {			
 		}
@@ -384,12 +382,11 @@ public class Model {
 		
 		OutputStream out = null;
 		try {
-			try {
-				out = new BufferedOutputStream(new FileOutputStream(path));
-				out.write(output);
-			} finally {
-				out.close();
-			}
+			File f = new File(path);
+			f.getParentFile().mkdirs();
+			out = new BufferedOutputStream(new FileOutputStream(path));
+			out.write(output);
+			out.close();
 		} catch(FileNotFoundException e) {			
 		} catch(IOException e) {			
 		}

@@ -1,8 +1,12 @@
 package org.ninthworld.voxiverse.world;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.util.glu.GLU;
 import org.ninthworld.voxiverse.util.*;
 
 public class NewCamera {
@@ -15,14 +19,25 @@ public class NewCamera {
 	private float mouseSensitivity;
 	private float maxLook;
 	
+	public float debug_focusDist;
+	public WorldVector3f debug_cameraPos;
+	
 	public NewCamera(){
 		this.focusPos = new WorldVector3f(0, 0, 0);
 		this.cameraPos = new WorldVector3f(0, 0, 0);
-		this.cameraRot = new WorldVector3f(0, 0, 0);
+		this.cameraRot = new WorldVector3f((float)Math.PI/6f, 0, 0);
 		this.focusDist = 5f*Chunk.CHUNK_SIZE*Chunk.VOXEL_SIZE;
 		this.moveSpeed = 0.8f;
 		this.mouseSensitivity = 0.005f;
 		this.maxLook = 85f;
+		
+		this.debug_focusDist = 4f*Chunk.CHUNK_SIZE*Chunk.VOXEL_SIZE;
+		this.debug_cameraPos = new WorldVector3f(0, 0, 0);
+	}
+	
+	public void renderCamera(){
+		GL11.glColor3f(1, 0, 0);
+		RenderUtils.drawCubeWireframe(focusPos, new WorldVector3f(Chunk.VOXEL_SIZE/2f, Chunk.VOXEL_SIZE/2f, Chunk.VOXEL_SIZE/2f));
 	}
 	
 	public void acceptInput(float delta){
@@ -37,6 +52,9 @@ public class NewCamera {
 		if(Math.abs(dWheel) > 0){
 			focusDist -= dWheel * 0.5f;
 			focusDist = (float) Math.max(focusDist, 0);
+
+			//debug_focusDist -= dWheel * 0.5f;
+			//debug_focusDist = (float) Math.max(debug_focusDist, 0);
 		}
 	}
 	
@@ -56,7 +74,7 @@ public class NewCamera {
             cameraRot.x += mouseDY * mouseSensitivity * delta;
             cameraRot.x = Math.max(-maxLook, Math.min(maxLook, cameraRot.x));
             
-            cameraRot.x = (float) Math.min(Math.max(cameraRot.x, 0.01f), Math.PI/2f);
+            cameraRot.x = (float) Math.min(Math.max(cameraRot.x, 0.01f), Math.PI/2f-0.001f);
         }
 	}
 	
@@ -113,14 +131,16 @@ public class NewCamera {
 		cameraPos.x = focusPos.x - (float)( Math.sin( cameraRot.x + Math.PI/2f ) * Math.cos( cameraRot.y - Math.PI/2f ) * focusDist );
 		cameraPos.y = focusPos.y - (float)( Math.cos( cameraRot.x - Math.PI/2f ) * -focusDist );
 		cameraPos.z = focusPos.z - (float)( Math.sin( cameraRot.x + Math.PI/2f ) * Math.sin( cameraRot.y - Math.PI/2f ) * focusDist );
+		
+		debug_cameraPos.x = focusPos.x - (float)( Math.sin( cameraRot.x + Math.PI/2f ) * Math.cos( cameraRot.y - Math.PI/2f ) * debug_focusDist );
+		debug_cameraPos.y = focusPos.y - (float)( Math.cos( cameraRot.x - Math.PI/2f ) * -debug_focusDist );
+		debug_cameraPos.z = focusPos.z - (float)( Math.sin( cameraRot.x + Math.PI/2f ) * Math.sin( cameraRot.y - Math.PI/2f ) * debug_focusDist );
 	}
 	
 	public void apply(){
+		GL11.glMatrixMode(GL11.GL_MATRIX_MODE);
 		GL11.glLoadIdentity();
-		GL11.glRotatef((float) Math.toDegrees(cameraRot.z), 0, 0, 1);
-		GL11.glRotatef((float) Math.toDegrees(cameraRot.x), 1, 0, 0);
-		GL11.glRotatef((float) Math.toDegrees(cameraRot.y), 0, 1, 0);
-		GL11.glTranslatef(-cameraPos.x, -cameraPos.y, -cameraPos.z);
+	    GLU.gluLookAt(cameraPos.x, cameraPos.y, cameraPos.z, focusPos.x, focusPos.y, focusPos.z, 0, 1, 0);
 	}
 	
 	public WorldVector3f getFocusPos(){

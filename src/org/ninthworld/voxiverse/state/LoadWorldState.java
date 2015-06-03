@@ -58,7 +58,7 @@ public class LoadWorldState implements State {
 		}
 		
 		world = new World();
-		world.initialize(seed, worldFileName, new EntityPlayer(), game.settingsManager);
+		world.initialize(seed, worldFileName, new EntityPlayer(), game.settingsManager, game.assetManager.modelManager);
 		
 		world.loadChunks();
 		game.changeState(new WorldState(world));

@@ -7,9 +7,14 @@ public class Entity {
 	private WorldVector3f rot;
 	
 	public Entity(){
-		this.pos = new WorldVector3f(0,0,0);
-		this.rot = new WorldVector3f(0,0,0);
-	} 
+		this.pos = WorldVector3f.Zero();
+		this.rot = WorldVector3f.Zero();
+	}
+	
+	public Entity(WorldVector3f pos, WorldVector3f rot){
+		this.pos = pos;
+		this.rot = rot;
+	}
 	
 	public void setPos(WorldVector3f pos){
 		this.pos = pos;

@@ -5,28 +5,36 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
 
+import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 import org.ninthworld.voxiverse.entity.*;
 import org.ninthworld.voxiverse.game.Game;
+import org.ninthworld.voxiverse.manager.ModelManager;
 import org.ninthworld.voxiverse.manager.SettingsManager;
 import org.ninthworld.voxiverse.util.*;
 
 public class World {
 	private int renderDistance;
 	private long seed;
-	private String worldFileName;
+	public String worldFileName;
 	//public Camera camera;
 	public NewCamera newCamera;
 	public EntityPlayer player;
 	private HashMap<ChunkVector3i, Chunk> loadedChunks;
 	
 	private SimplexNoise[] noise;
+	private SimplexNoise modelGen;
 	
 	private List<ChunkVector3i> chunksToUpdate;
 	
 	private ChunkVector3i lastPlayerPos;
+	
+	public CursorRaytracer cursorRaytracer;
+	
+	private ModelManager modelManager;
 	
 	public World(){
 		this.seed = 0;
@@ -36,9 +44,10 @@ public class World {
 		this.player = new EntityPlayer();
 		this.loadedChunks = new HashMap<ChunkVector3i, Chunk>();
 		this.noise = new SimplexNoise[10];
+		this.cursorRaytracer = new CursorRaytracer();
 	}
 	
-	public void initialize(long seed, String worldFileName, EntityPlayer player, SettingsManager settings){
+	public void initialize(long seed, String worldFileName, EntityPlayer player, SettingsManager settings, ModelManager modelManager){
 		this.seed = seed;
 		this.worldFileName = worldFileName;
 		this.player = player;
@@ -48,6 +57,9 @@ public class World {
 		for(int i=0; i<this.noise.length; i++){
 			this.noise[i] = new SimplexNoise(seed+i);
 		}
+		this.modelGen = new SimplexNoise(seed+this.noise.length);
+		
+		this.modelManager = modelManager;
 		
 		chunksToUpdate = new ArrayList<ChunkVector3i>();
 		
@@ -55,24 +67,23 @@ public class World {
 		lastPlayerPos = WorldVector3f.toChunkVector(newCamera.getFocusPos());
 	}
 	
-	public void input(){
-		
+	long lastTime = 0;
+	int mouseDelay = 160;
+	public void input(Game game){
+		if(Mouse.isButtonDown(0) && cursorRaytracer.isSelected && cursorRaytracer.isAdjSelected){
+			Chunk chunk = getChunkAt(cursorRaytracer.chunkAdjPos);
+			if(chunk != null && game.getTime() > lastTime+mouseDelay){
+				lastTime = game.getTime();
+				chunk.putBlock(cursorRaytracer.relVoxelAdjPos, Material.BLOCK_STONE);
+			}
+		}
 	}
 	
 	public void update(Game game){
 		this.renderDistance = game.settingsManager.getRenderDistance();
-		
-		newCamera.update();
-		/*player.setPos(new WorldVector3f(camera.getX(), camera.getY(), camera.getZ()));
-		player.setRotation(new WorldVector3f((float)Math.toRadians(camera.getRotationX()), (float)Math.toRadians(camera.getRotationY()), (float)Math.toRadians(camera.getRotationZ())));
-		
-		if(!WorldVector3f.toChunkVector(player.getPos()).equals(lastPlayerPos)){
-			loadChunks();
-		}
 
-		lastPlayerPos = WorldVector3f.toChunkVector(player.getPos());
-		
-		ChunkVector3i playerPos = WorldVector3f.toChunkVector(player.getPos());*/
+		newCamera.update();
+
 		if(!WorldVector3f.toChunkVector(newCamera.getFocusPos()).equals(lastPlayerPos)){
 			loadChunks();
 		}
@@ -81,7 +92,7 @@ public class World {
 		ChunkVector3i playerPos = WorldVector3f.toChunkVector(newCamera.getFocusPos());
 		ChunkVector3i closest = null;
 		for(ChunkVector3i chunkPos : chunksToUpdate){
-			if(closest == null || (chunkPos.getDistanceTo(playerPos) < closest.getDistanceTo(playerPos) && isChunkInFrustrum(chunkPos))){
+			if(closest == null || (chunkPos.getDistanceTo(playerPos) < closest.getDistanceTo(playerPos) /*&& isChunkInFrustrum(chunkPos)*/)){
 				closest = chunkPos;
 			}
 		}
@@ -91,13 +102,6 @@ public class World {
 		}
 		chunksToUpdate.remove(closest);
 		
-		/*if(chunksToUpdate.size() > 0){
-			Chunk chunk = getChunkAt(chunksToUpdate.get(chunksToUpdate.size()-1));
-			if(chunk != null){
-				chunk.createMeshes();
-			}
-			chunksToUpdate.remove(chunksToUpdate.size()-1);
-		}*/
 	}
 	
 	public void loadChunks(){
@@ -139,10 +143,6 @@ public class World {
 		loadedChunks.clear();
 		loadedChunks = newLoaded;
 
-		/*for(ChunkVector3i chunkPos : chunksToUpdate){
-			getChunkAt(chunkPos).createMeshes();
-		}
-		chunksToUpdate.clear();*/
 	}
 	
 	public Chunk getChunkAt(ChunkVector3i chunkPos){
@@ -167,7 +167,7 @@ public class World {
 		Chunk chunk;
 		if(chunkFileExists(chunkPos)){
 			String path = "worlds/"+worldFileName+"/chunks/voxels_"+chunkPos.toString()+".chunk";
-			chunk = Chunk.load(chunkPos, path);
+			chunk = Chunk.load(this, chunkPos, path);
 		}else{
 			chunk = generateChunk(chunkPos);
 		}
@@ -194,21 +194,28 @@ public class World {
 	}
 	
 	public Chunk generateChunk(ChunkVector3i chunkPos){
+
+		final int BIOME_OCEAN = 0;
+		final int BIOME_DESERT = 1;
+		final int BIOME_GRASS = 2;
+
+		float biome0Freq = 0.003f;
+		float biome1Freq = 0.008f;
+		
+		float redFlowerFreq = 0.02f;
+		float yellowFlowerFreq = 0.02f;
+		float tallGrassFreq = 0.2f;
+		float cactusFreq = 0.02f;
+		float rockFreq = 0.0108f;
+		
 		Chunk chunk = new Chunk(chunkPos, this);
 		
 		boolean debug_OnlyAir = true;
 		
 		for(int x=0; x<Chunk.CHUNK_SIZE; x++){
-			for(int z=0; z<Chunk.CHUNK_SIZE; z++){
+			for(int z=0; z<Chunk.CHUNK_SIZE; z++){				
 				int adjX = chunkPos.x*Chunk.CHUNK_SIZE + x;
 				int adjZ = chunkPos.z*Chunk.CHUNK_SIZE + z;
-				
-				final int BIOME_OCEAN = 0;
-				final int BIOME_DESERT = 1;
-				final int BIOME_GRASS = 2;
-
-				float biome0Freq = 0.003f;
-				float biome1Freq = 0.008f;
 				
 				float[] biome = new float[2];
 				biome[0] = noise[0].noise(adjX * biome0Freq, adjZ * biome0Freq);
@@ -232,7 +239,6 @@ public class World {
 				for(int y=0; y<Chunk.CHUNK_SIZE; y++){
 					int adjY = chunkPos.y*Chunk.CHUNK_SIZE + y;
 					int mat = Material.AIR;
-					
 
 					if(adjY < height[biomeId]){
 						if(biomeId == BIOME_OCEAN){
@@ -243,6 +249,36 @@ public class World {
 							mat = Material.BLOCK_GRASS;
 						}
 						debug_OnlyAir = false;
+					}else if(adjY == height[biomeId] && adjY >= 0){
+						double r = (modelGen.noise((float)(chunkPos.x*Chunk.CHUNK_SIZE+x)*20, (float)(chunkPos.z*Chunk.CHUNK_SIZE+z)*20)+1f)/2f;
+						
+						if(biomeId == BIOME_GRASS){
+							float lastFreq = 0f;
+							if(r > 0 && r < redFlowerFreq){
+								chunk.addEntityModel(generateEntityModel("redFlower", new VoxelVector3i(x, y, z)));
+							}
+							lastFreq+=redFlowerFreq;
+							if(r >= lastFreq && r < lastFreq+yellowFlowerFreq){
+								chunk.addEntityModel(generateEntityModel("yellowFlower", new VoxelVector3i(x, y, z)));
+							}
+							lastFreq+=yellowFlowerFreq;
+							if(r >= lastFreq && r < lastFreq+tallGrassFreq){
+								chunk.addEntityModel(generateEntityModel("tallGrass", new VoxelVector3i(x, y, z)));
+							}
+							lastFreq+=tallGrassFreq;
+							if(r >= lastFreq && r < lastFreq+rockFreq){
+								chunk.addEntityModel(generateEntityModel("rock", new VoxelVector3i(x, y, z)));
+							}
+						}else if(biomeId == BIOME_DESERT){
+							float lastFreq = 0f;
+							if(r > 0 && r < cactusFreq){
+								chunk.addEntityModel(generateEntityModel("cactus", new VoxelVector3i(x, y, z)));
+							}
+							lastFreq+=cactusFreq;
+							if(r >= lastFreq && r < lastFreq+rockFreq){
+								chunk.addEntityModel(generateEntityModel("rock", new VoxelVector3i(x, y, z)));
+							}
+						}
 					}else if(adjY < 0){
 						if(biomeId == BIOME_OCEAN){
 							mat = Material.BLOCK_WATER;
@@ -262,11 +298,23 @@ public class World {
 		return chunk;
 	}
 	
+	private EntityModel generateEntityModel(String modelName, VoxelVector3i pos){
+		float scale = modelManager.getScale(modelName);
+		Model model = modelManager.getModel(modelName);
+		float xOffset = Chunk.VOXEL_SIZE/2f - (model.getRawData().length*scale)/2f;
+		float zOffset = Chunk.VOXEL_SIZE/2f - (model.getRawData()[0][0].length*scale)/2f;
+		
+		return new EntityModel(
+				(VoxelVector3i.toWorldVector(pos)).add(xOffset, 0f, zOffset),
+				WorldVector3f.Zero(),
+				model,
+				scale
+			);
+	}
+	
 	private boolean isChunkInFrustrum(ChunkVector3i chunkPos){
 		
-		//WorldVector3f pos = player.getPos();
-		//WorldVector3f rot = player.getRotation();
-		WorldVector3f pos = newCamera.getCameraPos(); //newCamera.getFocusPos();
+		WorldVector3f pos = newCamera.getCameraPos();
 		WorldVector3f rot = newCamera.getCameraRot();
 		
 		float playerAngle = (float)(rot.y - Math.PI/2f);
@@ -305,20 +353,21 @@ public class World {
 		for(int pass=0; pass<2; pass++){
 			for(Entry<ChunkVector3i, Chunk> set : loadedChunks.entrySet()){
 				Chunk chunk = set.getValue();
-				if(!chunk.debug_OnlyAir && isChunkInFrustrum(chunk.getPos())){
-					GL11.glPushMatrix();
+				GL11.glPushMatrix();
+				
+				GL11.glTranslatef(
+						chunk.getPos().x*Chunk.CHUNK_SIZE*Chunk.VOXEL_SIZE,
+						chunk.getPos().y*Chunk.CHUNK_SIZE*Chunk.VOXEL_SIZE,
+						chunk.getPos().z*Chunk.CHUNK_SIZE*Chunk.VOXEL_SIZE
+					);
+					chunk.render(pass);
 					
-					GL11.glTranslatef(
-							chunk.getPos().x*Chunk.CHUNK_SIZE*Chunk.VOXEL_SIZE,
-							chunk.getPos().y*Chunk.CHUNK_SIZE*Chunk.VOXEL_SIZE,
-							chunk.getPos().z*Chunk.CHUNK_SIZE*Chunk.VOXEL_SIZE
-						);
-						chunk.render(pass);
-						
-					GL11.glPopMatrix();
-				}
+				GL11.glPopMatrix();
+					
 			}
 		}
+		
+		cursorRaytracer.renderBoundingBox();
 		
 		GL11.glDisable(GL11.GL_BLEND);
 	}
