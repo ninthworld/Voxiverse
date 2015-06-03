@@ -18,6 +18,18 @@ public class GUIButton {
 		this.state = GUIButtonState.NONE;
 	}
 	
+	public String getLabel(){
+		return label;
+	}
+	
+	public float getOriginX(){
+		return Display.getWidth()*x;
+	}
+	
+	public float getOriginY(){
+		return Display.getHeight()*y;
+	}
+	
 	public boolean isMouseInBounds(){
 		return inBounds(Mouse.getX(), Display.getHeight()-Mouse.getY());
 	}

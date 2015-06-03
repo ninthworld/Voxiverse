@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 import org.ninthworld.voxiverse.entity.*;
@@ -75,6 +76,13 @@ public class World {
 			if(chunk != null && game.getTime() > lastTime+mouseDelay){
 				lastTime = game.getTime();
 				chunk.putBlock(cursorRaytracer.relVoxelAdjPos, Material.BLOCK_STONE);
+			}
+		}
+		if(Keyboard.isKeyDown(Keyboard.KEY_X) && cursorRaytracer.isSelected){
+			Chunk chunk = getChunkAt(cursorRaytracer.chunkSelectPos);
+			if(chunk != null && game.getTime() > lastTime+mouseDelay){
+				lastTime = game.getTime();
+				chunk.putBlock(cursorRaytracer.relVoxelSelectPos, Material.AIR);
 			}
 		}
 	}

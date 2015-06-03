@@ -4,16 +4,21 @@ import org.ninthworld.voxiverse.world.Model;
 
 public class AssetManager {
 
+	public ShaderManager fontShader;
 	public ShaderManager diffuseShader;
 	public ShaderManager deferredAOShader;
 	public ShaderManager SSAOShader;
 	
+	public FontManager fontManager;
 	public ModelManager modelManager;
 	
 	public AssetManager(){
 	}
 	
 	public void loadBaseAssets(){
+		
+		fontShader = new ShaderManager();
+		fontShader.loadShader("res/shaders/noEffect.vert", "res/shaders/noEffect.frag");
 		
 		diffuseShader = new ShaderManager();
 		diffuseShader.loadShader("res/shaders/shader.vert", "res/shaders/shader.frag");
@@ -23,6 +28,10 @@ public class AssetManager {
 		
 		SSAOShader = new ShaderManager();
 		SSAOShader.loadShader("res/shaders/ssao.vert", "res/shaders/ssao.frag");
+		
+		fontManager = new FontManager();
+		fontManager.loadFont("Font1", 16, "res/fonts/font01.png");
+		fontManager.loadFont("Font2", 16, "res/fonts/font02.png");
 	}
 	
 	public void loadAssets(){
@@ -39,5 +48,6 @@ public class AssetManager {
 		diffuseShader.cleanUp();
 		deferredAOShader.cleanUp();
 		SSAOShader.cleanUp();
+		fontManager.cleanUp();
 	}
 }

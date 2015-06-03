@@ -45,17 +45,23 @@ public class NewCamera {
 		acceptInputRotate(2);
 		acceptInputGrab();
 		acceptInputMove(delta);
+		
+		moveSpeed = focusDist/2048f;
 	}
 	
 	public void acceptInputZoom(){
 		float dWheel = (float) Mouse.getDWheel();
 		if(Math.abs(dWheel) > 0){
 			focusDist -= dWheel * 0.5f;
-			focusDist = (float) Math.max(focusDist, 0);
-
-			//debug_focusDist -= dWheel * 0.5f;
-			//debug_focusDist = (float) Math.max(debug_focusDist, 0);
 		}
+		
+		if(Keyboard.isKeyDown(Keyboard.KEY_UP)){
+			focusDist -= 8f;
+		}else if(Keyboard.isKeyDown(Keyboard.KEY_DOWN)){
+			focusDist += 8f;
+		}
+		
+		focusDist = (float) Math.max(focusDist, 0);
 	}
 	
 	public void acceptInputGrab(){

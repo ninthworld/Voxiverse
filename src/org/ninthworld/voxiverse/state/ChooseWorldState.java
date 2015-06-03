@@ -1,5 +1,9 @@
 package org.ninthworld.voxiverse.state;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 import org.ninthworld.voxiverse.game.Game;
@@ -8,22 +12,34 @@ import org.ninthworld.voxiverse.util.Color;
 import org.ninthworld.voxiverse.util.NewFont;
 import org.ninthworld.voxiverse.util.WorldVector3f;
 
-public class MainMenuState implements State {
+public class ChooseWorldState implements State {
 	
-	private GUIButton[] buttons;
+	private List<GUIButton> buttons;
 	
 	@Override
 	public void init(Game game) {
-		buttons = new GUIButton[4];
-		buttons[0] = new GUIButton("New World", 0.5f, 0.2f, 0.2f, 0.1f);
-		buttons[1] = new GUIButton("Load World", 0.5f, 0.4f, 0.2f, 0.1f);
-		buttons[2] = new GUIButton("Options", 0.5f, 0.6f, 0.2f, 0.1f);
-		buttons[3] = new GUIButton("Exit", 0.5f, 0.8f, 0.2f, 0.1f);
+		buttons = new ArrayList<GUIButton>();
+		buttons.add( new GUIButton("Back", 0.2f, 0.9f, 0.2f, 0.1f) );
+		
+		File dir = new File("worlds\\");
+		String[] list = dir.list();
+		for(String str : list){
+			System.out.println(str);
+			File f = new File(dir.getAbsolutePath()+"\\"+str);
+			if(f.isDirectory()){
+				buttons.add(new GUIButton(str, 0.5f, buttons.size()*0.2f, 0.2f, 0.1f));
+			}
+		}
 	}
 
 	@Override
 	public void update(Game game, int delta) {
-		
+		for(GUIButton button : buttons){
+				if(buttons[1].isMouseInBounds()){
+			// Load World Action
+			//game.changeState(new LoadWorldState("world0"));
+			game.changeState(new ChooseWorldState());
+		}
 	}
 
 	@Override
@@ -33,21 +49,9 @@ public class MainMenuState implements State {
 		}
 		
 		if(Mouse.isButtonDown(0)){
-			if(buttons[0].isMouseInBounds()){
-				// New World Action
-				game.changeState(new NewWorldState());
-			}
-			if(buttons[1].isMouseInBounds()){
-				// Load World Action
-				//game.changeState(new LoadWorldState("world0"));
-				game.changeState(new ChooseWorldState());
-			}
-			if(buttons[2].isMouseInBounds()){
-				// Options Action
-			}
-			if(buttons[3].isMouseInBounds()){
-				// Exit Action
-				game.changeState(new QuitState());
+			if(buttons.get(0).isMouseInBounds()){
+				// Back Action
+				game.changeState(new MainMenuState());
 			}
 		}
 	}
