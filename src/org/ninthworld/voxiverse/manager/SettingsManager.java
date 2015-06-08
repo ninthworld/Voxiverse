@@ -24,6 +24,12 @@ public class SettingsManager {
 		return height;
 	}
 	
+	public void setRenderDistance(int dist){
+		if(dist >= 0){
+			renderDistance = dist;
+		}
+	}
+	
 	public int getRenderDistance(){
 		return renderDistance;
 	}

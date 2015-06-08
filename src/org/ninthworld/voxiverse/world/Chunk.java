@@ -139,10 +139,45 @@ public class Chunk extends Model {
 		this.setDataAt(voxelPos, material);
 		saveChunk();
 		createMeshes();
+		
+		if(edgeOfChunk(voxelPos)){
+			for(ChunkVector3i chunkPos : getAdjChunkPos(voxelPos)){
+				Chunk chunk = parent.getChunkAt(chunkPos);
+				if(chunk != null){
+					chunk.createMeshes();
+				}
+			}
+		}
+		
 		//parent.loadChunk(pos);
 		
 		//this.createMeshes();
 		//this.debug_OnlyAir = false;
+	}
+	
+	public static boolean edgeOfChunk(VoxelVector3i voxelPos){
+		return (voxelPos.x <= 0 || voxelPos.x >= CHUNK_SIZE-1 ||
+				voxelPos.y <= 0 || voxelPos.y >= CHUNK_SIZE-1 ||
+				voxelPos.z <= 0 || voxelPos.z >= CHUNK_SIZE-1);
+	}
+	
+	public List<ChunkVector3i> getAdjChunkPos(VoxelVector3i voxelPos){
+		List<ChunkVector3i> chunkPosList = new ArrayList<ChunkVector3i>();
+		
+		if(voxelPos.x <= 0)
+			chunkPosList.add(new ChunkVector3i(pos.x-1, pos.y, pos.z));
+		if(voxelPos.x >= CHUNK_SIZE-1)
+			chunkPosList.add(new ChunkVector3i(pos.x+1, pos.y, pos.z));
+		if(voxelPos.y <= 0)
+			chunkPosList.add(new ChunkVector3i(pos.x, pos.y-1, pos.z));
+		if(voxelPos.y >= CHUNK_SIZE-1)
+			chunkPosList.add(new ChunkVector3i(pos.x, pos.y+1, pos.z));
+		if(voxelPos.z <= 0)
+			chunkPosList.add(new ChunkVector3i(pos.x, pos.y, pos.z-1));
+		if(voxelPos.z >= CHUNK_SIZE-1)
+			chunkPosList.add(new ChunkVector3i(pos.x, pos.y, pos.z+1));
+			
+		return chunkPosList;
 	}
 	
 	public void saveChunk(){
