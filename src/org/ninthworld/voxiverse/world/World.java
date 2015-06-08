@@ -71,11 +71,18 @@ public class World {
 	long lastTime = 0;
 	int mouseDelay = 160;
 	public void input(Game game){
-		if(Mouse.isButtonDown(0) && cursorRaytracer.isSelected && cursorRaytracer.isAdjSelected){
-			Chunk chunk = getChunkAt(cursorRaytracer.chunkAdjPos);
-			if(chunk != null && game.getTime() > lastTime+mouseDelay){
-				lastTime = game.getTime();
-				chunk.putBlock(cursorRaytracer.relVoxelAdjPos, Material.BLOCK_STONE);
+		if(Mouse.isButtonDown(0)){
+			if(cursorRaytracer.isSelected && cursorRaytracer.isAdjSelected){
+				Chunk chunk = getChunkAt(cursorRaytracer.chunkAdjPos);
+				if(chunk != null && game.getTime() > lastTime+mouseDelay){
+					lastTime = game.getTime();
+					chunk.putBlock(cursorRaytracer.relVoxelAdjPos, Material.BLOCK_STONE1);
+				}
+			}else if(cursorRaytracer.isEntityModelSelected){
+				if(game.getTime() > lastTime+200){
+					lastTime = game.getTime();
+					cursorRaytracer.entityModelSelected.toggleSelected();
+				}
 			}
 		}
 		if(Keyboard.isKeyDown(Keyboard.KEY_X) && cursorRaytracer.isSelected){
@@ -93,7 +100,7 @@ public class World {
 		newCamera.update();
 
 		if(!WorldVector3f.toChunkVector(newCamera.getFocusPos()).equals(lastPlayerPos)){
-			loadChunks();
+			loadChunks(game.assetManager.modelManager);
 		}
 		lastPlayerPos = WorldVector3f.toChunkVector(newCamera.getFocusPos());
 		
@@ -110,9 +117,13 @@ public class World {
 		}
 		chunksToUpdate.remove(closest);
 		
+		
+		for(Chunk c : getLoadedChunks()){
+			c.update();
+		}
 	}
 	
-	public void loadChunks(){
+	public void loadChunks(ModelManager modelManager){
 		int loadDist = renderDistance;
 
 		HashMap<ChunkVector3i, Chunk> newLoaded = new HashMap<ChunkVector3i, Chunk>(); 
@@ -125,7 +136,7 @@ public class World {
 					chunkPos = ChunkVector3i.add(chunkPos, new ChunkVector3i(x, y, z), null);
 					Chunk chunk = getChunkAt(chunkPos);
 					if(chunk == null){
-						chunk = loadChunk(chunkPos);
+						chunk = loadChunk(chunkPos, modelManager);
 					}
 					newLoaded.put(chunkPos, chunk);
 				}
@@ -171,11 +182,12 @@ public class World {
 		return f.exists();
 	}
 	
-	public Chunk loadChunk(ChunkVector3i chunkPos){
+	public Chunk loadChunk(ChunkVector3i chunkPos, ModelManager modelManager){
 		Chunk chunk;
 		if(chunkFileExists(chunkPos)){
-			String path = "worlds/"+worldFileName+"/chunks/voxels_"+chunkPos.toString()+".chunk";
-			chunk = Chunk.load(this, chunkPos, path);
+			//String path = "worlds/"+worldFileName+"/chunks/voxels_"+chunkPos.toString()+".chunk";
+			//chunk = Chunk.load(this, chunkPos, path);
+			chunk = Chunk.loadChunk(this, chunkPos, modelManager);
 		}else{
 			chunk = generateChunk(chunkPos);
 		}
@@ -202,6 +214,64 @@ public class World {
 	}
 	
 	public Chunk generateChunk(ChunkVector3i chunkPos){
+		Chunk chunk = new Chunk(chunkPos, this);
+		
+		for(int x=0; x<Chunk.CHUNK_SIZE; x++){
+			for(int z=0; z<Chunk.CHUNK_SIZE; z++){				
+				int adjX = chunkPos.x*Chunk.CHUNK_SIZE + x;
+				int adjZ = chunkPos.z*Chunk.CHUNK_SIZE + z;
+					
+				float height1Freq = 0.008f;
+				float height1Amp = 3f;
+				float height2Freq = 0.01f;
+				float height2Amp = 2f;
+				
+				float height = noise[0].noise(adjX * height1Freq,  adjZ * height1Freq) * height1Amp + noise[1].noise(adjX * height2Freq, adjZ * height2Freq) * height2Amp;
+				
+				for(int y=0; y<Chunk.CHUNK_SIZE; y++){
+					int adjY = chunkPos.y*Chunk.CHUNK_SIZE + y;
+					int mat = Material.AIR;
+
+					float adjHeight = (float)Math.abs((height < 0 ? height+1 : height))%1;
+					if(adjY < height+1 && adjY >= height){
+						Random randX = new Random(seed + chunkPos.x*Chunk.CHUNK_SIZE+x);
+						Random randY = new Random(seed + chunkPos.y*Chunk.CHUNK_SIZE+y);
+						Random randZ = new Random(seed + chunkPos.z*Chunk.CHUNK_SIZE+z);
+						Random rand = new Random(seed + (int)Math.sqrt(randX.nextInt()*randY.nextInt()*randZ.nextInt()));
+						//double r = (modelGen.noise((float)(chunkPos.x*Chunk.CHUNK_SIZE+x)*20, (float)(chunkPos.z*Chunk.CHUNK_SIZE+z)*20)+1f)/2f;
+						
+						if(rand.nextDouble() > 0.9996d){
+							chunk.addEntityModel(generateEntityModel("tree1", new VoxelVector3i(x, y, z)));	
+						}
+					}else if(adjY < height && adjY >= height-1){
+						if(adjHeight < 0.2f){
+							mat = Material.BLOCK_GRASS1;
+						}else if(adjHeight >= 0.2f && adjHeight < 0.4f){
+							mat = Material.BLOCK_GRASS2;
+						}else if(adjHeight >= 0.4f){
+							mat = Material.BLOCK_GRASS3;
+						}
+					}else if(adjY < height-1){
+						if(adjY%2 == 0){
+							mat = Material.BLOCK_DIRT1;
+						}else{
+							mat = Material.BLOCK_DIRT2;
+						}
+					}
+					
+					/*else if(adjY < 0){
+						mat = Material.BLOCK_WATER;
+					}*/
+					
+					chunk.setDataAt(new VoxelVector3i(x, y, z), mat);
+				}
+			}
+		}
+		
+		return chunk;
+	}
+	
+	/*public Chunk generateChunk(ChunkVector3i chunkPos){
 
 		final int BIOME_OCEAN = 0;
 		final int BIOME_DESERT = 1;
@@ -250,11 +320,11 @@ public class World {
 
 					if(adjY < height[biomeId]){
 						if(biomeId == BIOME_OCEAN){
-							mat = Material.BLOCK_SAND;
+							mat = Material.BLOCK_GRASS3;
 						}else if(biomeId == BIOME_DESERT){
-							mat = Material.BLOCK_SAND;
+							mat = Material.BLOCK_GRASS2;
 						}else if(biomeId == BIOME_GRASS){
-							mat = Material.BLOCK_GRASS;
+							mat = Material.BLOCK_GRASS1;
 						}
 						debug_OnlyAir = false;
 					}else if(adjY == height[biomeId] && adjY >= 0){
@@ -304,7 +374,7 @@ public class World {
 		}
 		
 		return chunk;
-	}
+	}*/
 	
 	private EntityModel generateEntityModel(String modelName, VoxelVector3i pos){
 		float scale = modelManager.getScale(modelName);

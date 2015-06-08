@@ -14,6 +14,7 @@ public class ModelManager {
 	}
 	
 	public void loadModel(String name, Model m, float scale){
+		m.name = name;
 		m.createMeshes();
 		models.put(name, m);
 		scales.put(name, scale);

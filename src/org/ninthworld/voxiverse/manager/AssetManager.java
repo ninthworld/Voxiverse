@@ -42,6 +42,7 @@ public class AssetManager {
 		modelManager.loadModel("tallGrass", Model.load("res/models/tallGrass.model"), 2f);
 		modelManager.loadModel("cactus", Model.load("res/models/cactus.model"), 2f);
 		modelManager.loadModel("rock", Model.load("res/models/rock.model"), 2f);
+		modelManager.loadModel("tree1", Model.load("res/models/tree1.model"), 16f);
 	}
 	
 	public void cleanUp(){

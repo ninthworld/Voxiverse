@@ -33,6 +33,8 @@ public class Model {
 	
 	private boolean hasMeshes;
 	
+	public String name;
+	
 	public Model(int[][][] data){
 		this.data = data;
 
@@ -49,6 +51,8 @@ public class Model {
 		}
 		
 		this.hasMeshes = false;
+		
+		this.name = "";
 	}
 	
 	public boolean hasMeshes(){

@@ -32,24 +32,31 @@ public class MainMenuState implements State {
 			button.update();
 		}
 		
-		if(Mouse.isButtonDown(0)){
-			if(buttons[0].isMouseInBounds()){
-				// New World Action
-				game.changeState(new NewWorldState());
-			}
-			if(buttons[1].isMouseInBounds()){
-				// Load World Action
-				//game.changeState(new LoadWorldState("world0"));
-				game.changeState(new ChooseWorldState());
-			}
-			if(buttons[2].isMouseInBounds()){
-				// Options Action
-			}
-			if(buttons[3].isMouseInBounds()){
-				// Exit Action
-				game.changeState(new QuitState());
+		while(Mouse.next()){
+			if(!Mouse.getEventButtonState()){
+				if(Mouse.getEventButton() == 0){
+					// Left Button Released
+					
+					if(buttons[0].isMouseInBounds()){
+						// New World Action
+						game.changeState(new NewWorldState());
+					}
+					if(buttons[1].isMouseInBounds()){
+						// Load World Action
+						//game.changeState(new LoadWorldState("world0"));
+						game.changeState(new ChooseWorldState());
+					}
+					if(buttons[2].isMouseInBounds()){
+						// Options Action
+					}
+					if(buttons[3].isMouseInBounds()){
+						// Exit Action
+						game.changeState(new QuitState());
+					}
+				}
 			}
 		}
+		
 	}
 
 	@Override

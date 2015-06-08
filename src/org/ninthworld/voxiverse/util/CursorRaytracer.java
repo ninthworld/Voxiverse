@@ -10,6 +10,7 @@ import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
+import org.ninthworld.voxiverse.entity.EntityModel;
 import org.ninthworld.voxiverse.world.Chunk;
 import org.ninthworld.voxiverse.world.Material;
 import org.ninthworld.voxiverse.world.NewCamera;
@@ -26,6 +27,9 @@ public class CursorRaytracer {
 	public VoxelVector3i relVoxelAdjPos;
 	public boolean isAdjSelected;
 	
+	public EntityModel entityModelSelected;
+	public boolean isEntityModelSelected;
+	
 	public CursorRaytracer(){
 		isSelected = false;
 		selectPos = new WorldVector3f(0, 0, 0);
@@ -35,6 +39,9 @@ public class CursorRaytracer {
 		relVoxelAdjPos = new VoxelVector3i(0, 0, 0);
 		chunkAdjPos = new ChunkVector3i(0, 0, 0);
 		isAdjSelected = false;
+		
+		entityModelSelected = null;
+		isEntityModelSelected = false;
 	}
 	
     IntBuffer viewBuffer = BufferUtils.createIntBuffer(16);
@@ -99,8 +106,10 @@ public class CursorRaytracer {
 			}
 		}
 		
+		isAdjSelected = false;
+		isEntityModelSelected = false;
+		
 		if(isSelected){
-			isAdjSelected = false;
 			loop2:
 			for(int i=0; i<Chunk.VOXEL_SIZE; i++){
 				WorldVector3f[] adj = new WorldVector3f[6];
@@ -127,7 +136,29 @@ public class CursorRaytracer {
 					}
 				}
 			}			
+		}else{
+			// Check model bounding-boxes
+			EntityModel entityModel = getRaytracedEntityModel(world, selectPos);
+			if(entityModel != null){
+				isEntityModelSelected = true;
+				entityModelSelected = entityModel;
+				entityModel.setHovered();
+			}
+						
 		}
+	}
+	
+	public EntityModel getRaytracedEntityModel(World world, WorldVector3f selectPos){
+		for(Chunk chunk : world.getLoadedChunks()){
+			WorldVector3f worldChunkPos = ChunkVector3i.toWorldVector(chunk.getPos());
+			WorldVector3f relativeWorldPos = new WorldVector3f(selectPos.x - worldChunkPos.x, selectPos.y - worldChunkPos.y, selectPos.z - worldChunkPos.z);
+			for(EntityModel entityModel : chunk.getEntityModels()){
+				if(entityModel.isInBoundingBox(relativeWorldPos)){
+					return entityModel;
+				}
+			}
+		}		
+		return null;
 	}
 	
 	public void renderBoundingBox(){

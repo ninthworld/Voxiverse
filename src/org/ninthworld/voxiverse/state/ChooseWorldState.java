@@ -23,23 +23,19 @@ public class ChooseWorldState implements State {
 		
 		File dir = new File("worlds\\");
 		String[] list = dir.list();
-		for(String str : list){
-			System.out.println(str);
-			File f = new File(dir.getAbsolutePath()+"\\"+str);
-			if(f.isDirectory()){
-				buttons.add(new GUIButton(str, 0.5f, buttons.size()*0.2f, 0.2f, 0.1f));
+		if(list != null && list.length > 0){
+			for(String str : list){
+				File f = new File(dir.getAbsolutePath()+"\\"+str);
+				if(f.isDirectory()){
+					buttons.add(new GUIButton(str, 0.5f, buttons.size()*0.2f, 0.2f, 0.1f));
+				}
 			}
 		}
 	}
 
 	@Override
 	public void update(Game game, int delta) {
-		for(GUIButton button : buttons){
-				if(buttons[1].isMouseInBounds()){
-			// Load World Action
-			//game.changeState(new LoadWorldState("world0"));
-			game.changeState(new ChooseWorldState());
-		}
+		
 	}
 
 	@Override
@@ -48,10 +44,20 @@ public class ChooseWorldState implements State {
 			button.update();
 		}
 		
-		if(Mouse.isButtonDown(0)){
-			if(buttons.get(0).isMouseInBounds()){
-				// Back Action
-				game.changeState(new MainMenuState());
+		while(Mouse.next()){
+			if(!Mouse.getEventButtonState()){
+				if(Mouse.getEventButton() == 0){
+					// Left Button Released
+					for(GUIButton button : buttons){
+						if(button.isMouseInBounds()){
+							if(button.getLabel().equals("Back")){
+								game.changeState(new MainMenuState());
+							}else{
+								game.changeState(new LoadWorldState(button.getLabel()));
+							}
+						}
+					}					
+				}
 			}
 		}
 	}

@@ -1,5 +1,10 @@
 package org.ninthworld.voxiverse.util;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.jnbt.*;
 import org.lwjgl.util.vector.Vector3f;
 import org.ninthworld.voxiverse.world.Chunk;
 
@@ -65,5 +70,28 @@ public class WorldVector3f {
 		this.y += y;
 		this.z += z;
 		return this;
+	}
+	
+	public CompoundTag encodeCompoundTag(String name){
+		Map<String, Tag> tags = new HashMap<String, Tag>();
+		tags.put("x", new FloatTag("x", x));
+		tags.put("y", new FloatTag("y", y));
+		tags.put("z", new FloatTag("z", z));
+		
+		return new CompoundTag(name, tags);
+	}
+	
+	public void decodeCompoundTag(CompoundTag tag){
+		for(Entry<String, Tag> entry : tag.getValue().entrySet()){
+			Tag valueTag = entry.getValue();
+			
+			if(valueTag.getName().equals("x") && valueTag instanceof FloatTag){
+				x = ((FloatTag) valueTag).getValue();
+			}else if(valueTag.getName().equals("y") && valueTag instanceof FloatTag){
+				y = ((FloatTag) valueTag).getValue();
+			}else if(valueTag.getName().equals("z") && valueTag instanceof FloatTag){
+				z = ((FloatTag) valueTag).getValue();
+			}
+		}
 	}
 }
